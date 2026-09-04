@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Beyond the Click — Human Verification</title>
+<meta name="description" content="A checkbox reimagined. Verify you're human, one interaction at a time." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23120a24'/%3E%3Cpath d='M8 17l5 5 11-12' stroke='%23ff5fa8' stroke-width='3.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <div class="bg-decor" aria-hidden="true">
+    <span class="glow glow-a"></span>
+    <span class="glow glow-b"></span>
+  </div>
+
+  <header class="site-head">
+    <p class="eyebrow"><i class="bi bi-joystick"></i> Beyond the Click — Challenge Entry</p>
+    <h1>Human verification,<br /><span class="grad">with a boss fight.</span></h1>
+    <p class="lede">No blurry text. No traffic lights. No "select all the crosswalks."<br />
+      This one hands you a console and a D-pad.</p>
+  </header>
+
+  <main>
+    <section class="demo" aria-labelledby="demo-heading">
+      <h2 id="demo-heading" class="visually-hidden">Human verification</h2>
+
+      <div class="teaser" aria-hidden="true">
+        <div class="teaser-screen">
+          <canvas id="preview-canvas" width="75" height="75"></canvas>
+          <div class="scanlines"></div>
+        </div>
+        <p class="teaser-label"><span class="blink">●</span> Player one, ready</p>
+      </div>
+
+      <div class="verify-card" id="verify-card">
+        <label class="verify-checkbox" for="human-check">
+          <input type="checkbox" id="human-check" class="real-checkbox" aria-describedby="verify-status" />
+          <span class="box" aria-hidden="true">
+            <i class="bi bi-check-lg check-icon"></i>
+          </span>
+          <span class="verify-copy">
+            <strong>Verify you're human</strong>
+            <small id="verify-status">Press to begin.</small>
+          </span>
+          <span class="verify-badge" aria-hidden="true"><i class="bi bi-controller"></i></span>
+        </label>
+      </div>
+
+      <ul class="stat-row">
+        <li><i class="bi bi-lightning-charge-fill"></i> Zero dependencies</li>
+        <li><i class="bi bi-phone"></i> Keyboard &amp; touch</li>
+        <li><i class="bi bi-music-note-beamed"></i> Synthesized sound</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-foot">
+    <p>HTML · CSS · JavaScript — no frameworks, no build step.</p>
+  </footer>
+
+  <!-- ===================== HANDHELD CONSOLE OVERLAY ===================== -->
+  <div class="switch-overlay" id="switch-overlay" hidden>
+    <div class="console-wrap">
+      <div class="gameboy" id="gameboy-console" role="dialog" aria-modal="true" aria-label="Sunfruit Quest handheld console">
+
+        <div class="gb-top-row">
+          <span class="gb-led" aria-hidden="true"></span>
+          <span class="gb-led-label">BATTERY</span>
+          <span class="gb-brand">
+            <span class="gb-brand-name">Sunfruit</span><span class="gb-brand-sub">QUEST</span>
+          </span>
+          <button class="gb-power" id="power-switch" aria-label="Close console">
+            <i class="bi bi-power"></i>
+          </button>
+        </div>
+
+        <div class="gb-screen-bezel">
+          <div class="gb-bezel-label">
+            <span>PIXEL MATRIX</span><span>STEREO SOUND</span>
+          </div>
+          <div class="gb-screen-frame">
+            <canvas id="game-canvas" width="640" height="576" aria-label="Sunfruit Quest game screen"></canvas>
+            <div class="scanlines" aria-hidden="true"></div>
+            <div class="screen-glare" aria-hidden="true"></div>
+          </div>
+        </div>
+
+        <div class="gb-pad">
+          <div class="dpad">
+            <button class="dpad-btn dpad-up"    data-dir="up"    aria-label="Move up"><i class="bi bi-caret-up-fill"></i></button>
+            <button class="dpad-btn dpad-left"  data-dir="left"  aria-label="Move left"><i class="bi bi-caret-left-fill"></i></button>
+            <button class="dpad-btn dpad-center" tabindex="-1" aria-hidden="true"></button>
+            <button class="dpad-btn dpad-right" data-dir="right" aria-label="Move right"><i class="bi bi-caret-right-fill"></i></button>
+            <button class="dpad-btn dpad-down"  data-dir="down"  aria-label="Move down"><i class="bi bi-caret-down-fill"></i></button>
+          </div>
+        </div>
+
+        <div class="gb-face">
+          <div class="ab-buttons">
+            <button class="round-btn btn-b" data-action="b" aria-label="B button">B</button>
+            <button class="round-btn btn-a" data-action="a" aria-label="A button, attack and confirm">A</button>
+          </div>
+        </div>
+
+        <div class="gb-meta-row">
+          <button class="pill-btn" id="select-btn" aria-label="Select, toggle sound">
+            <i class="bi bi-volume-up-fill" id="select-icon"></i><span>SELECT</span>
+          </button>
+          <button class="pill-btn" id="start-btn" aria-label="Start, restart quest">
+            <i class="bi bi-arrow-clockwise"></i><span>START</span>
+          </button>
+        </div>
+
+        <div class="gb-speaker" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+      </div>
+
+      <p class="console-hint">
+        <span>Move</span> D-Pad / Arrows&nbsp;&nbsp;·&nbsp;&nbsp;<span>Attack</span> A / B / Space&nbsp;&nbsp;·&nbsp;&nbsp;<span>Close</span> Power / Esc
+      </p>
+    </div>
+  </div>
+  <!-- =================== /HANDHELD CONSOLE OVERLAY ======================= -->
+
+  <script src="js/game.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

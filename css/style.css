@@ -1,0 +1,613 @@
+/* =========================================================
+   Beyond the Click — Sunfruit Quest
+   Dark, vibrant, minimal page shell + a Game Boy–style console
+   ========================================================= */
+
+:root{
+  --pink: #ff5fa8;
+  --pink-deep: #d63f8c;
+  --violet: #8b5cf6;
+  --violet-deep: #4a2a8a;
+  --cyan: #4fe3ff;
+  --yellow: #ffd23f;
+  --green: #3ddc84;
+  --ink: #0c0716;
+  --bg: #0e0a1c;
+  --bg-2: #150e28;
+  --card: #17102b;
+  --line: rgba(255,255,255,0.08);
+  --text: #f2edff;
+  --text-dim: #a79bc9;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-pixel: 'Press Start 2P', 'Courier New', monospace;
+}
+
+*, *::before, *::after{ box-sizing: border-box; }
+
+html, body{ margin: 0; min-height: 100%; }
+
+body{
+  font-family: var(--font-body);
+  color: var(--text);
+  background:
+    radial-gradient(900px 500px at 15% -5%, rgba(255,95,168,0.16), transparent 60%),
+    radial-gradient(900px 600px at 100% 20%, rgba(79,227,255,0.12), transparent 55%),
+    var(--bg);
+  overflow-x: hidden;
+  position: relative;
+}
+
+.visually-hidden{
+  position: absolute !important;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------------- ambient background ---------------- */
+.bg-decor{
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.glow{
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.5;
+}
+.glow-a{
+  width: 380px; height: 380px; background: var(--violet);
+  top: -120px; left: -100px;
+  animation: drift 16s ease-in-out infinite;
+}
+.glow-b{
+  width: 320px; height: 320px; background: var(--pink-deep);
+  bottom: -140px; right: -80px;
+  animation: drift 20s ease-in-out infinite reverse;
+}
+@keyframes drift{
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(40px, 30px) scale(1.12); }
+}
+
+/* ---------------- header / footer ---------------- */
+.site-head{
+  position: relative;
+  z-index: 1;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: clamp(64px, 12vh, 120px) 24px 0;
+  text-align: center;
+}
+.eyebrow{
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 2.2px;
+  text-transform: uppercase;
+  color: var(--pink);
+  margin: 0 0 18px;
+}
+.site-head h1{
+  font-size: clamp(30px, 5.4vw, 50px);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.6px;
+  margin: 0 0 18px;
+  color: var(--text);
+}
+.site-head h1 .grad{
+  background: linear-gradient(92deg, var(--pink), var(--yellow) 55%, var(--cyan));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.lede{
+  margin: 0;
+  font-size: clamp(14px, 2.1vw, 16px);
+  line-height: 1.65;
+  color: var(--text-dim);
+}
+.eyebrow i{ margin-right: 6px; }
+
+/* ---------------- teaser screen ---------------- */
+.teaser{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 26px;
+}
+.teaser-screen{
+  position: relative;
+  width: 150px;   /* exactly 2x the 75x75 canvas buffer — keeps pixels sharp */
+  height: 150px;
+  overflow: hidden;
+  border-radius: 14px;
+  background: linear-gradient(160deg, #2a1c46, #150e28);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.08) inset,
+    0 12px 30px rgba(0,0,0,0.5),
+    0 0 26px 2px rgba(255,95,168,0.28);
+  animation: teaserGlow 3.4s ease-in-out infinite;
+}
+@keyframes teaserGlow{
+  0%, 100% { box-shadow: 0 0 0 1px rgba(255,255,255,0.08) inset, 0 12px 30px rgba(0,0,0,0.5), 0 0 22px 2px rgba(255,95,168,0.24); }
+  50% { box-shadow: 0 0 0 1px rgba(255,255,255,0.12) inset, 0 12px 30px rgba(0,0,0,0.5), 0 0 34px 6px rgba(79,227,255,0.32); }
+}
+#preview-canvas{
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.teaser-label{
+  margin: 0;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.blink{ color: var(--green); animation: blink 1.4s steps(1) infinite; }
+@keyframes blink{ 0%,49%{opacity:1;} 50%,100%{opacity:0.15;} }
+
+/* ---------------- stat row ---------------- */
+.stat-row{
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 18px;
+  margin: 22px 0 0;
+  padding: 0;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.stat-row li{ display: flex; align-items: center; gap: 6px; }
+.stat-row i{ color: var(--pink); }
+
+main{ position: relative; z-index: 1; }
+
+.site-foot{
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 40px 20px 56px;
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+
+/* ---------------- verify checkbox card ---------------- */
+.demo{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 20px 10px;
+}
+.verify-card{
+  position: relative;
+  background:
+    linear-gradient(180deg, var(--card), var(--bg-2));
+  border-radius: 18px;
+  padding: 22px 26px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.45), 0 0 0 1px var(--line) inset;
+  max-width: 440px;
+  width: 100%;
+  transition: transform .18s ease, box-shadow .25s ease;
+}
+/* pixel corner brackets — a little arcade menu framing */
+.verify-card::before,
+.verify-card::after{
+  content: "";
+  position: absolute;
+  width: 14px; height: 14px;
+  border: 2px solid var(--pink);
+  opacity: 0.65;
+  pointer-events: none;
+}
+.verify-card::before{ top: 8px; left: 8px; border-right: 0; border-bottom: 0; border-radius: 4px 0 0 0; }
+.verify-card::after{ bottom: 8px; right: 8px; border-left: 0; border-top: 0; border-radius: 0 0 4px 0; }
+.verify-card:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 26px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,95,168,0.35) inset, 0 0 30px rgba(255,95,168,0.15);
+}
+.verify-checkbox{
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  user-select: none;
+}
+.real-checkbox{
+  position: absolute;
+  width: 1px; height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.verify-checkbox .box{
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  border: 2px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.03);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  transition: background .25s ease, transform .15s ease, box-shadow .25s ease, border-color .25s ease;
+  flex: none;
+}
+.verify-checkbox .check-icon{ font-size: 24px; line-height: 1; }
+.real-checkbox:checked + .box{
+  background: linear-gradient(160deg, var(--green), #1fbf72);
+  border-color: transparent;
+  color: #06210f;
+  box-shadow: 0 0 0 5px rgba(61,220,132,0.18);
+  animation: pop 0.35s ease;
+}
+.real-checkbox:focus-visible + .box{
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+@keyframes pop{
+  0% { transform: scale(0.7) rotate(-8deg); }
+  60% { transform: scale(1.15) rotate(4deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+.verify-copy{ display: flex; flex-direction: column; gap: 3px; }
+.verify-copy strong{ font-size: 16px; font-weight: 600; }
+.verify-copy small{ color: var(--text-dim); font-size: 13px; }
+.real-checkbox:checked ~ .verify-copy small{ color: var(--green); font-weight: 600; }
+.verify-badge{
+  font-size: 20px;
+  color: var(--text-dim);
+  opacity: 0.5;
+  transition: color .3s ease, opacity .3s ease, transform .3s ease;
+}
+.real-checkbox:checked ~ .verify-badge{
+  color: var(--green);
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+/* =========================================================
+   HANDHELD CONSOLE
+   Everything inside .gameboy is measured in `em` of --gbu, so the
+   shell has one fixed aspect ratio and JS can scale the whole thing
+   with a single custom property — it always lands fully on screen.
+   ========================================================= */
+.switch-overlay{
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: radial-gradient(1200px 700px at 50% 40%, rgba(74,30,102,0.55), rgba(5,2,12,0.95));
+  backdrop-filter: blur(4px);
+  animation: fadeIn .25s ease;
+}
+.switch-overlay[hidden]{ display: none; }
+@keyframes fadeIn{ from{ opacity: 0; } to{ opacity: 1; } }
+
+.console-wrap{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+}
+
+.gameboy{
+  --gbu: 12px;
+  font-size: var(--gbu);
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-areas:
+    "top    top"
+    "screen screen"
+    "pad    face"
+    "meta   meta";
+  align-items: center;
+  width: 34em;
+  padding: 1.1em 1.3em 1.5em;
+  border-radius: 1.6em 1.6em 4em 1.6em;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 15% 0%, rgba(255,255,255,0.18), transparent 55%),
+    linear-gradient(155deg, #a55ce0, #5a2a9a 55%, #35156a);
+  box-shadow:
+    0 3em 6em rgba(0,0,0,0.6),
+    0 0 0 0.16em rgba(255,255,255,0.07) inset,
+    0 -1.2em 2.6em rgba(0,0,0,0.35) inset,
+    0 0 4em rgba(168,80,220,0.25);
+  animation: consolePop .38s cubic-bezier(.2,1.4,.4,1);
+}
+/* slow gloss sweep across the plastic */
+.gameboy::after{
+  content: "";
+  position: absolute;
+  top: -60%;
+  left: -35%;
+  width: 40%;
+  height: 220%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.13), transparent);
+  transform: rotate(18deg);
+  pointer-events: none;
+  animation: sheen 7s ease-in-out infinite;
+}
+@keyframes sheen{
+  0%, 65% { transform: translateX(-40%) rotate(18deg); opacity: 0; }
+  70% { opacity: 1; }
+  100% { transform: translateX(320%) rotate(18deg); opacity: 0; }
+}
+@keyframes consolePop{
+  0% { transform: scale(0.55) translateY(30px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+/* ---------------- top row: battery, badge, power ---------------- */
+.gb-top-row{
+  grid-area: top;
+  display: flex;
+  align-items: center;
+  gap: 0.55em;
+  padding: 0 0.2em 0.75em;
+}
+.gb-led{
+  width: 0.62em; height: 0.62em;
+  border-radius: 50%;
+  background: #ff4b4b;
+  box-shadow: 0 0 0.6em 0.14em rgba(255,75,75,0.8);
+  animation: ledPulse 2.4s ease-in-out infinite;
+  flex: none;
+}
+@keyframes ledPulse{ 0%, 100%{ opacity: .6; } 50%{ opacity: 1; } }
+.gb-led-label{
+  font-size: 0.56em;
+  letter-spacing: 0.18em;
+  color: rgba(255,255,255,0.55);
+  white-space: nowrap;
+}
+.gb-brand{
+  flex: 1;
+  text-align: center;
+  font-style: italic;
+  color: rgba(255,255,255,0.9);
+  white-space: nowrap;
+}
+.gb-brand-name{ font-weight: 800; font-size: 1.05em; }
+.gb-brand-sub{ font-weight: 600; font-size: 0.7em; letter-spacing: 0.2em; margin-left: 0.5em; opacity: 0.75; }
+.gb-power{
+  width: 2.1em; height: 2.1em;
+  border-radius: 50%;
+  border: none;
+  background: rgba(12,7,22,0.55);
+  color: #fff;
+  font-size: 1em;
+  line-height: 1;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .1s ease, background .15s ease;
+  flex: none;
+}
+.gb-power i{ font-size: 0.95em; }
+.gb-power:hover{ background: rgba(12,7,22,0.75); }
+.gb-power:active{ transform: scale(0.9); }
+
+/* ---------------- the screen ---------------- */
+.gb-screen-bezel{
+  grid-area: screen;
+  background: #0a0614;
+  border-radius: 0.85em;
+  padding: 0.8em 0.8em 0.65em;
+  box-shadow: 0 0 0 0.24em rgba(0,0,0,0.35) inset, 0 0.5em 1.4em rgba(0,0,0,0.4);
+}
+.gb-bezel-label{
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.48em;
+  letter-spacing: 0.16em;
+  color: rgba(255,255,255,0.38);
+  padding: 0 0.4em 0.7em;
+}
+.gb-screen-frame{
+  position: relative;
+  width: 100%;
+  aspect-ratio: 320 / 288;   /* locked, so the canvas can fill it exactly */
+  border-radius: 0.3em;
+  overflow: hidden;
+  background: #05020c;
+  box-shadow:
+    0 0 0 0.1em rgba(255,255,255,0.10) inset,
+    0 0 1.6em 0.12em rgba(255,111,176,0.30),
+    0 0 2.6em 0.4em rgba(79,227,255,0.14);
+}
+/* Fills the frame edge to edge. Its resolution is set from JS out of
+   the real pixel size of the screen, so nothing is ever upscaled. */
+#game-canvas{
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #10062a;
+}
+.scanlines{
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,0.16) 0px,
+    rgba(0,0,0,0.16) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  opacity: 0.22;
+}
+.gb-screen-frame .scanlines{ opacity: 0.12; }
+.screen-glare{
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(112deg, rgba(255,255,255,0.10) 0 18%, rgba(255,255,255,0) 42%);
+  mix-blend-mode: screen;
+  opacity: 0.5;
+}
+
+/* ---------------- D-pad and face buttons ---------------- */
+.gb-pad{ grid-area: pad; justify-self: start; padding: 0.9em 0 0.3em 0.35em; }
+.gb-face{ grid-area: face; justify-self: end; padding: 0.9em 0.35em 0.3em 0; }
+
+.dpad{
+  display: grid;
+  grid-template-columns: repeat(3, 3em);
+  grid-template-rows: repeat(3, 3em);
+  gap: 0.08em;
+  place-items: center;
+}
+.dpad-btn{
+  width: 100%; height: 100%;
+  border: none;
+  background: #1a1226;
+  color: rgba(255,255,255,0.85);
+  font-size: 1.15em;
+  line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  transition: transform .08s ease, background .12s ease;
+}
+.dpad-up{ grid-column: 2; grid-row: 1; border-radius: 0.45em 0.45em 0 0; }
+.dpad-left{ grid-column: 1; grid-row: 2; border-radius: 0.45em 0 0 0.45em; }
+.dpad-center{ grid-column: 2; grid-row: 2; background: #1a1226; pointer-events: none; }
+.dpad-right{ grid-column: 3; grid-row: 2; border-radius: 0 0.45em 0.45em 0; }
+.dpad-down{ grid-column: 2; grid-row: 3; border-radius: 0 0 0.45em 0.45em; }
+.dpad-btn.pressed,
+.dpad-btn:active{
+  background: #000;
+  transform: scale(0.94);
+  box-shadow: 0 0 0 0.16em rgba(79,227,255,0.5);
+}
+
+.ab-buttons{
+  position: relative;
+  width: 9.6em;
+  height: 6.6em;
+}
+.round-btn{
+  position: absolute;
+  width: 3.6em;
+  height: 3.6em;
+  border-radius: 50%;
+  border: none;
+  background: radial-gradient(circle at 35% 30%, #ff8a8a, #c73e3e 70%);
+  color: #4a0f0f;
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: 1em;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  box-shadow: 0 0.26em 0 rgba(0,0,0,0.35), 0 0.4em 0.7em rgba(0,0,0,0.3);
+  transition: transform .08s ease, box-shadow .08s ease;
+}
+.btn-b{ left: 0; bottom: 0; }
+.btn-a{ right: 0; top: 0; }
+.round-btn.pressed,
+.round-btn:active{
+  transform: translateY(0.16em);
+  box-shadow: 0 0.1em 0 rgba(0,0,0,0.35), 0 0.16em 0.3em rgba(0,0,0,0.3);
+}
+
+/* ---------------- select / start ---------------- */
+.gb-meta-row{
+  grid-area: meta;
+  display: flex;
+  justify-content: center;
+  gap: 1.6em;
+  padding: 0.6em 0 0.1em;
+}
+.pill-btn{
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  border: none;
+  background: rgba(0,0,0,0.28);
+  color: rgba(255,255,255,0.8);
+  border-radius: 999px;
+  padding: 0.55em 1em;
+  font-size: 0.64em;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  white-space: nowrap;
+  transform: rotate(-18deg);
+  transition: transform .1s ease, background .15s ease;
+}
+.pill-btn i{ font-size: 1.15em; }
+.pill-btn:hover{ background: rgba(0,0,0,0.4); }
+.pill-btn:active{ transform: rotate(-18deg) scale(0.94); }
+
+/* ---------------- speaker grille ---------------- */
+.gb-speaker{
+  position: absolute;
+  right: 1.4em;
+  bottom: 1em;
+  display: flex;
+  gap: 0.3em;
+  transform: rotate(-22deg);
+  pointer-events: none;
+}
+.gb-speaker span{
+  width: 0.24em;
+  height: 3em;
+  border-radius: 0.16em;
+  background: rgba(0,0,0,0.3);
+}
+
+.console-hint{
+  font-size: 11.5px;
+  color: var(--text-dim);
+  text-align: center;
+  max-width: 560px;
+  margin: 0;
+}
+.console-hint span{ color: var(--yellow); font-weight: 600; }
+
+/* =========================================================
+   Landscape shell — wherever the viewport is wider than it is tall,
+   the pad and face buttons move beside the screen instead of under
+   it, which lets the screen itself grow by roughly 1.7x.
+   ========================================================= */
+@media (min-width: 680px) and (min-aspect-ratio: 1/1){
+  .gameboy{
+    width: auto;
+    grid-template-columns: 12.6em minmax(0, auto) 12.6em;
+    grid-template-areas:
+      "top top    top"
+      "pad screen face"
+      "pad meta   face";
+    padding: 0.8em 1.3em 0.9em;
+    border-radius: 3.4em / 2.6em;
+  }
+  .gb-screen-frame{ width: 42em; }
+  .gb-pad,
+  .gb-face{
+    justify-self: center;
+    align-self: center;
+    padding: 0 0 1.6em;
+  }
+  .gb-meta-row{ padding: 0.8em 0 0; }
+  .gb-speaker{ display: none; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .glow, .gameboy, .gameboy::after, .switch-overlay,
+  .gb-led, .teaser-screen, .blink{ animation: none !important; }
+}
