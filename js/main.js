@@ -19,12 +19,19 @@
   var selectIcon = document.getElementById("select-icon");
   var startBtn = document.getElementById("start-btn");
   var previewCanvas = document.getElementById("preview-canvas");
+  var bgmBtn = document.getElementById("bgm-toggle");
+  var bgmIcon = document.getElementById("bgm-icon");
 
   var STATUS_DEFAULT = "Press to begin.";
   var STATUS_VERIFIED = "Verified — you're wonderfully human.";
+  var MUTE_KEY = "sunfruit-muted";
 
+  var music = game.music;
   var muted = false;
   var verified = false;
+  var pausedByTab = false;
+
+  try { muted = localStorage.getItem(MUTE_KEY) === "1"; } catch (e) {}
 
   game.init(canvas);
   game.onVerified = function () {
@@ -33,6 +40,51 @@
     statusEl.textContent = STATUS_VERIFIED;
     setTimeout(closeConsole, 3400);
   };
+
+  /* -------------------- sound & background music --------------------
+     One switch drives both the SFX and the music loop, and both
+     buttons that flip it. Browsers refuse to start audio before a
+     user gesture, so the loop arms itself on the first interaction
+     anywhere on the page and the choice is remembered from there. */
+  function syncSound() {
+    game.setMuted(muted);
+    selectIcon.className = muted ? "bi bi-volume-mute-fill" : "bi bi-volume-up-fill";
+    if (bgmIcon) bgmIcon.className = muted ? "bi bi-volume-mute-fill" : "bi bi-music-note-beamed";
+    if (bgmBtn) {
+      bgmBtn.classList.toggle("is-muted", muted);
+      bgmBtn.setAttribute("aria-pressed", muted ? "false" : "true");
+      bgmBtn.setAttribute("aria-label", muted ? "Turn music on" : "Turn music off");
+    }
+    try { localStorage.setItem(MUTE_KEY, muted ? "1" : "0"); } catch (e) {}
+  }
+
+  function setMuted(next) {
+    muted = next;
+    syncSound();
+    if (!muted) music.start();
+  }
+
+  function armAudio() {
+    game.unlockAudio();
+    if (!muted) music.start();
+  }
+  document.addEventListener("pointerdown", armAudio);
+  document.addEventListener("keydown", armAudio);
+
+  // never leave music playing in a tab nobody is looking at
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) {
+      if (music.isPlaying()) { pausedByTab = true; music.stop(0.25); }
+    } else if (pausedByTab) {
+      pausedByTab = false;
+      if (!muted) music.start();
+    }
+  });
+
+  if (bgmBtn) {
+    bgmBtn.addEventListener("click", function () { setMuted(!muted); });
+  }
+  syncSound();
 
   /* -------------------- fitting the hardware to the viewport --------------------
      Every dimension inside .gameboy is expressed in `em` of the
@@ -91,12 +143,15 @@
     fitConsole();
     requestAnimationFrame(fitConsole);
     game.unlockAudio();
+    music.start();                 // in case nothing else armed it yet
+    music.setMode("quest");        // same loop, drums and lead join in
     game.start();
   }
 
   function closeConsole() {
     overlay.hidden = true;
     document.body.style.overflow = "";
+    music.setMode("calm");
     game.stop();
   }
 
@@ -203,9 +258,7 @@
 
   /* -------------------- select / start -------------------- */
   selectBtn.addEventListener("click", function () {
-    muted = !muted;
-    game.setMuted(muted);
-    selectIcon.className = muted ? "bi bi-volume-mute-fill" : "bi bi-volume-up-fill";
+    setMuted(!muted);
   });
 
   startBtn.addEventListener("click", function () {
@@ -218,9 +271,10 @@
     var pW = 0, pH = 0;
 
     function fitPreview() {
-      var rect = previewCanvas.getBoundingClientRect();
-      pW = Math.round(rect.width) || 150;
-      pH = Math.round(rect.height) || 150;
+      // offsetWidth/Height, not getBoundingClientRect: the teaser screen sits
+      // at a slight tilt and the rect would report the rotated bounding box.
+      pW = previewCanvas.offsetWidth || 150;
+      pH = previewCanvas.offsetHeight || 150;
       var dpr = Math.min(window.devicePixelRatio || 1, 3);
       previewCanvas.width = Math.round(pW * dpr);
       previewCanvas.height = Math.round(pH * dpr);

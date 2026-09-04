@@ -200,6 +200,8 @@
     }
     return {
       unlock: ensure,
+      // the music loop rides the same context — browsers cap how many you get
+      context: function () { ensure(); return ctx; },
       setMuted: function (m) { muted = m; },
       blip: function () { tone(520, 0.06, "square", 0.08); },
       swing: function () { tone(300, 0.09, "sawtooth", 0.09); },
@@ -224,6 +226,203 @@
         [523, 659, 784, 1046].forEach(function (f, i) {
           tone(f, 0.18, "square", 0.11, i * 0.14);
         });
+      }
+    };
+  })();
+
+
+  /* ---------------------------------------------------------
+     Chiptune BGM — one 8-bar loop in A minor, four voices, no
+     audio files. Notes are scheduled a tenth of a second ahead
+     of the clock rather than on a timer, so the beat stays
+     rock solid even while the game loop hogs the main thread.
+
+     Both intensity modes walk the same chord progression at the
+     same tempo, so switching between them mid-bar is seamless:
+     "calm" is bass + arpeggio for the page, "quest" adds the
+     lead line and drums when the console opens.
+  --------------------------------------------------------- */
+  var Music = (function () {
+    var BPM = 104;
+    var STEP = 60 / BPM / 4;          // one 16th note, in seconds
+    var BARS = 8, STEPS = BARS * 16;
+    var LOOKAHEAD = 0.12;             // seconds of audio queued ahead
+    var TICK = 25;                    // scheduler wake-up, ms
+
+    /* root note + triad for each bar. The G# in the last bar is the
+       harmonic-minor lift that pulls the loop back around to Am. */
+    var PROG = [
+      { root: 45, triad: [69, 72, 76] },   // Am
+      { root: 41, triad: [65, 69, 72] },   // F
+      { root: 36, triad: [64, 67, 72] },   // C
+      { root: 43, triad: [67, 71, 74] },   // G
+      { root: 45, triad: [69, 72, 76] },   // Am
+      { root: 41, triad: [65, 69, 72] },   // F
+      { root: 43, triad: [67, 71, 74] },   // G
+      { root: 40, triad: [64, 68, 71] }    // E
+    ];
+
+    /* the tune: [step, midi note, length in 16ths] */
+    var LEAD = [
+      [0, 69, 4], [4, 72, 4], [8, 76, 8],
+      [16, 77, 4], [20, 76, 4], [24, 72, 8],
+      [32, 76, 4], [36, 79, 4], [40, 76, 4], [44, 72, 4],
+      [48, 74, 8], [56, 71, 8],
+      [64, 69, 4], [68, 72, 4], [72, 76, 4], [76, 81, 4],
+      [80, 79, 8], [88, 77, 8],
+      [96, 76, 4], [100, 74, 4], [104, 71, 8],
+      [112, 68, 8], [120, 71, 8]
+    ];
+    var LEAD_AT = (function () {
+      var m = {}, i;
+      for (i = 0; i < LEAD.length; i++) m[LEAD[i][0]] = LEAD[i];
+      return m;
+    })();
+
+    /* semitone offset of the bass note on each 8th of a bar */
+    var BASS = [0, 0, 0, 12, 0, 0, 7, 12];
+
+    var MODES = {
+      calm:  { master: 0.15, lead: 0.05, arp: 0.045, bass: 0.09,
+               kick: 0, snare: 0, hat: 0.012, hatEvery: 4, sparse: true },
+      quest: { master: 0.26, lead: 0.11, arp: 0.06, bass: 0.14,
+               kick: 0.22, snare: 0.13, hat: 0.028, hatEvery: 2, sparse: false }
+    };
+
+    var ctx = null, bus = null, noiseBuf = null, timer = null;
+    var step = 0, nextTime = 0;
+    var playing = false, muted = false, armed = false, mode = "calm";
+
+    function hz(midi) { return 440 * Math.pow(2, (midi - 69) / 12); }
+
+    function makeNoise() {
+      var len = Math.floor(ctx.sampleRate * 0.5);
+      var buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      var d = buf.getChannelData(0);
+      for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      return buf;
+    }
+
+    function voice(freq, t, dur, type, vol) {
+      if (!(vol > 0)) return;
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type;
+      o.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(vol, t + 0.014);
+      g.gain.setValueAtTime(vol, t + dur * 0.6);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g).connect(bus);
+      o.start(t);
+      o.stop(t + dur + 0.03);
+    }
+
+    function noiseHit(t, dur, vol, cut) {
+      if (!(vol > 0)) return;
+      var s = ctx.createBufferSource(), g = ctx.createGain(), f = ctx.createBiquadFilter();
+      s.buffer = noiseBuf;
+      f.type = "highpass";
+      f.frequency.setValueAtTime(cut, t);
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      s.connect(f).connect(g).connect(bus);
+      s.start(t);
+      s.stop(t + dur + 0.02);
+    }
+
+    function kick(t, vol) {
+      if (!(vol > 0)) return;
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = "sine";
+      o.frequency.setValueAtTime(130, t);
+      o.frequency.exponentialRampToValueAtTime(42, t + 0.11);
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+      o.connect(g).connect(bus);
+      o.start(t);
+      o.stop(t + 0.2);
+    }
+
+    /* Reads MODES[mode] fresh every step, so switching intensity
+       takes effect within a 16th note without restarting anything. */
+    function scheduleStep(i, t) {
+      var m = MODES[mode];
+      var ch = PROG[Math.floor(i / 16) % BARS];
+      var inBar = i % 16;
+
+      if (inBar % 2 === 0) {
+        voice(hz(ch.root + BASS[inBar / 2]), t, STEP * 1.7, "triangle", m.bass);
+      }
+      if (inBar % 2 === 1) {
+        voice(hz(ch.triad[((inBar - 1) / 2) % 3] + 12), t, STEP * 0.9, "triangle", m.arp);
+      }
+      var note = LEAD_AT[i];
+      if (note && !(m.sparse && note[2] < 8)) {
+        voice(hz(note[1]), t, STEP * note[2] * 0.92, "square", m.lead);
+      }
+      if (inBar === 0 || inBar === 8) kick(t, m.kick);
+      if (inBar === 4 || inBar === 12) noiseHit(t, 0.13, m.snare, 1400);
+      if (inBar % m.hatEvery === 0) noiseHit(t, 0.03, m.hat, 7000);
+    }
+
+    function tick() {
+      if (!ctx || !playing) return;
+      while (nextTime < ctx.currentTime + LOOKAHEAD) {
+        scheduleStep(step, nextTime);
+        nextTime += STEP;
+        step = (step + 1) % STEPS;
+      }
+    }
+
+    function fade(to, secs) {
+      if (!bus || !ctx) return;
+      var t = ctx.currentTime;
+      bus.gain.cancelScheduledValues(t);
+      bus.gain.setValueAtTime(Math.max(0.0001, bus.gain.value), t);
+      bus.gain.linearRampToValueAtTime(to, t + secs);
+    }
+
+    /* Must be called from a user gesture — browsers refuse audio
+       before one. Safe to call repeatedly. */
+    function start() {
+      if (playing || muted) return;
+      ctx = Sound.context();
+      if (!ctx) return;
+      if (!bus) {
+        bus = ctx.createGain();
+        bus.gain.value = 0.0001;
+        bus.connect(ctx.destination);
+      }
+      if (!noiseBuf) noiseBuf = makeNoise();
+      armed = true;
+      playing = true;
+      step = 0;
+      nextTime = ctx.currentTime + 0.08;
+      fade(MODES[mode].master, 1.4);          // ease in, never a hard cut
+      timer = setInterval(tick, TICK);
+      tick();
+    }
+
+    function stop(secs) {
+      if (!playing) return;
+      playing = false;
+      if (timer) { clearInterval(timer); timer = null; }
+      fade(0.0001, secs || 0.4);              // already-queued notes ring out under it
+    }
+
+    return {
+      start: start,
+      stop: stop,
+      isPlaying: function () { return playing; },
+      isArmed: function () { return armed; },
+      setMode: function (m) {
+        if (mode === m || !MODES[m]) return;
+        mode = m;
+        if (playing && !muted) fade(MODES[mode].master, 0.9);
+      },
+      setMuted: function (m) {
+        muted = m;
+        if (m) stop(0.35);
       }
     };
   })();
@@ -630,8 +829,9 @@
     this.viewH = h;
   };
 
-  Game.prototype.setMuted = function (m) { Sound.setMuted(m); };
+  Game.prototype.setMuted = function (m) { Sound.setMuted(m); Music.setMuted(m); };
   Game.prototype.unlockAudio = function () { Sound.unlock(); };
+  Game.prototype.music = Music;
 
   Game.prototype.start = function () {
     if (this.running) return;
