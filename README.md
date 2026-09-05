@@ -2,6 +2,8 @@
 
 A human verification checkbox reimagined as a **retro handheld console game**. No blurry text, no traffic lights, no "select all the crosswalks" — just a D-pad, two buttons, and a little pixel hero on a quest to prove you're human.
 
+**[🌐 Try it live → dwaidatta.in/beyond-the-click](https://www.dwaidatta.in/beyond-the-click/)**
+
 ## ✨ What is this?
 
 This is a **zero-dependency, fully synthesized** HTML/CSS/JavaScript challenge entry that turns boring CAPTCHA into a playable 80s Game Boy–style adventure.
